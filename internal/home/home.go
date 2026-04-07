@@ -3,6 +3,7 @@ package home
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -1266,19 +1267,14 @@ func printWebAddrs(proto, addr string, port uint16) {
 // admin interface.  proto is either schemeHTTP or schemeHTTPS.
 //
 // TODO(s.chzhen):  Implement separate functions for HTTP and HTTPS.
-func printHTTPAddresses(proto string, tlsMgr *tlsManager) {
-	var tlsConf *tlsConfigSettings
-	if tlsMgr != nil {
-		tlsConf = tlsMgr.config()
-	}
-
+func printHTTPAddresses(proto string, tlsConf *tls.Config, httpsPort uint16) {
 	port := config.HTTPConfig.Address.Port()
 	if proto == urlutil.SchemeHTTPS {
-		port = tlsConf.PortHTTPS
+		port = httpsPort
 	}
 
 	if proto == urlutil.SchemeHTTPS && tlsConf.ServerName != "" {
-		printWebAddrs(proto, tlsConf.ServerName, tlsConf.PortHTTPS)
+		printWebAddrs(proto, tlsConf.ServerName, httpsPort)
 
 		return
 	}

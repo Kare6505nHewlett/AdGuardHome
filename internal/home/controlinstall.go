@@ -509,6 +509,12 @@ func (web *webAPI) finalizeInstall(
 		return
 	}
 
+	// TODO: !! Find alternative solution.
+	tlsMgr, ok := web.tlsManager.(*tlsManager)
+	if !ok {
+		return
+	}
+
 	// TODO(e.burkov): StartMods() should be put in a separate goroutine at the
 	// moment we'll allow setting up TLS in the initial configuration or the
 	// configuration itself will use HTTPS protocol, because the underlying
@@ -516,7 +522,7 @@ func (web *webAPI) finalizeInstall(
 	err = startMods(
 		ctx,
 		web.baseLogger,
-		web.tlsManager,
+		tlsMgr,
 		web.confModifier,
 		web.httpReg,
 		web.conf.workDir,
@@ -530,7 +536,7 @@ func (web *webAPI) finalizeInstall(
 	err = config.write(
 		ctx,
 		web.logger,
-		web.tlsManager,
+		tlsMgr,
 		web.auth,
 		web.conf.workDir,
 		web.conf.confPath,

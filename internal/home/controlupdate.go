@@ -65,7 +65,13 @@ func (web *webAPI) handleVersionJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = resp.setAllowedToAutoUpdate(ctx, l, web.tlsManager)
+	err = resp.setAllowedToAutoUpdate(
+		ctx,
+		l,
+		web.conf.portHTTPS,
+		web.conf.portDNSOverTLS,
+		web.conf.portDNSOverQUIC,
+	)
 	if err != nil {
 		// Don't wrap the error, because it's informative enough as is.
 		aghhttp.ErrorAndLog(ctx, l, r, w, http.StatusInternalServerError, "%s", err)
@@ -184,14 +190,16 @@ type versionResponse struct {
 func (vr *versionResponse) setAllowedToAutoUpdate(
 	ctx context.Context,
 	l *slog.Logger,
-	tlsMgr *tlsManager,
+	portHTTPS uint16,
+	portDNSOverTLS uint16,
+	portDNSOverQUIC uint16,
 ) (err error) {
 	if vr.CanAutoUpdate != aghalg.NBTrue {
 		return nil
 	}
 
 	canUpdate := true
-	if tlsConfUsesPrivilegedPorts(tlsMgr.config()) ||
+	if tlsConfUsesPrivilegedPorts(portHTTPS, portDNSOverTLS, portDNSOverQUIC) ||
 		config.HTTPConfig.Address.Port() < 1024 ||
 		config.DNS.Port < 1024 {
 		canUpdate, err = aghnet.CanBindPrivilegedPorts(ctx, l)
@@ -207,8 +215,8 @@ func (vr *versionResponse) setAllowedToAutoUpdate(
 
 // tlsConfUsesPrivilegedPorts returns true if the provided TLS configuration
 // indicates that privileged ports are used.
-func tlsConfUsesPrivilegedPorts(c *tlsConfigSettings) (ok bool) {
-	return c.Enabled && (c.PortHTTPS < 1024 || c.PortDNSOverTLS < 1024 || c.PortDNSOverQUIC < 1024)
+func tlsConfUsesPrivilegedPorts(portHTTPS, portDNSOverTLS, portDNSOverQUIC uint16) (ok bool) {
+	return portHTTPS < 1024 || portDNSOverTLS < 1024 || portDNSOverQUIC < 1024
 }
 
 // finishUpdate completes an update procedure.  It is intended to be used as a

@@ -320,7 +320,8 @@ func handleServiceInstallCmd(
 			"There are a few more things that must be configured before you can use it.\n"+
 			"Click on the link below and follow the Installation Wizard steps to finish setup.\n"+
 			"AdGuard Home is now available at the following addresses:")
-		printHTTPAddresses(urlutil.SchemeHTTP, nil)
+		// TODO !! Do something with it
+		printHTTPAddresses(urlutil.SchemeHTTP, nil, 0)
 	}
 
 	return nil

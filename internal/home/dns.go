@@ -16,6 +16,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/aghalg"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
+	"github.com/AdguardTeam/AdGuardHome/internal/aghtls"
 	"github.com/AdguardTeam/AdGuardHome/internal/client"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
@@ -260,7 +261,7 @@ func newServerConfig(
 	clientSrcConf *clientSourcesConfig,
 	tlsConf *tlsConfigSettings,
 	dohConf *doHConfig,
-	tlsMgr *tlsManager,
+	tlsMgr aghtls.TLSConfigProvider,
 	httpReg aghhttp.Registrar,
 	clientsContainer dnsforward.ClientsContainer,
 	confModifier agh.ConfigModifier,
@@ -282,7 +283,7 @@ func newServerConfig(
 		TLSConf:                intTLSConf,
 		TLSAllowUnencryptedDoH: dohConf.InsecureEnabled,
 		UpstreamTimeout:        time.Duration(dnsConf.UpstreamTimeout),
-		TLSv12Roots:            tlsMgr.rootCerts,
+		TLSv12Roots:            tlsMgr.RootCAs(),
 		ConfModifier:           confModifier,
 		HTTPReg:                httpReg,
 		LocalPTRResolvers:      dnsConf.PrivateRDNSResolvers,
@@ -420,18 +421,20 @@ type dnsEncryption struct {
 }
 
 // getDNSEncryption returns the TLS encryption addresses that AdGuard Home
-// listens on.  tlsMgr must not be nil.
-func getDNSEncryption(tlsMgr *tlsManager) (de dnsEncryption) {
-	tlsConf := tlsMgr.config()
-
-	if !tlsConf.Enabled || len(tlsConf.ServerName) == 0 {
+// listens on.
+func getDNSEncryption(
+	serverName string,
+	httpsPort uint16,
+	dnsOverTLSPort uint16,
+	dnsOverQUIC uint16,
+) (de dnsEncryption) {
+	if len(serverName) == 0 {
 		return dnsEncryption{}
 	}
 
-	hostname := tlsConf.ServerName
-	if tlsConf.PortHTTPS != 0 {
-		addr := hostname
-		if p := tlsConf.PortHTTPS; p != defaultPortHTTPS {
+	if httpsPort != 0 {
+		addr := serverName
+		if p := httpsPort; p != defaultPortHTTPS {
 			addr = netutil.JoinHostPort(addr, p)
 		}
 
@@ -442,17 +445,17 @@ func getDNSEncryption(tlsMgr *tlsManager) (de dnsEncryption) {
 		}).String()
 	}
 
-	if p := tlsConf.PortDNSOverTLS; p != 0 {
+	if p := dnsOverTLSPort; p != 0 {
 		de.tls = (&url.URL{
 			Scheme: "tls",
-			Host:   netutil.JoinHostPort(hostname, p),
+			Host:   netutil.JoinHostPort(serverName, p),
 		}).String()
 	}
 
-	if p := tlsConf.PortDNSOverQUIC; p != 0 {
+	if p := dnsOverQUIC; p != 0 {
 		de.quic = (&url.URL{
 			Scheme: "quic",
-			Host:   netutil.JoinHostPort(hostname, p),
+			Host:   netutil.JoinHostPort(serverName, p),
 		}).String()
 	}
 

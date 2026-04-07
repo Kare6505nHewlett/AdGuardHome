@@ -57,6 +57,10 @@ type tlsManager struct {
 	// conf contains the TLS configuration settings.  It must not be nil.
 	conf *tlsConfigSettings
 
+	// TODO !! Finish docs.
+	// original
+	tlsConf *tls.Config
+
 	// confModifier is used to update the global configuration.
 	confModifier agh.ConfigModifier
 
@@ -152,6 +156,12 @@ func newTLSManager(ctx context.Context, conf *tlsManagerConfig) (m *tlsManager, 
 		return m, err
 	}
 
+	m.tlsConf = &tls.Config{
+		GetCertificate: m.getCertificate,
+		MinVersion:     tls.VersionTLS12,
+		MaxVersion:     tls.VersionTLS13,
+	}
+
 	m.setCertFileTime(ctx)
 
 	return m, nil
@@ -199,11 +209,6 @@ func (m *tlsManager) start(ctx context.Context) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	// The background context is used because the TLSConfigChanged wraps context
-	// with timeout on its own and shuts down the server, which handles current
-	// request.
-	m.web.tlsConfigChanged(context.Background(), m.conf)
 
 	go m.handleCertFileChange(ctx)
 }
@@ -271,20 +276,12 @@ func (m *tlsManager) reload(ctx context.Context) {
 	m.status = status
 
 	m.certLastMod = fi.ModTime().UTC()
-
-	err = m.reconfigureDNSServer(ctx)
-	if err != nil {
-		m.logger.ErrorContext(ctx, "reconfiguring dns server", slogutil.KeyError, err)
-	}
-
-	// The background context is used because the TLSConfigChanged wraps context
-	// with timeout on its own and shuts down the server, which handles current
-	// request.
-	m.web.tlsConfigChanged(context.Background(), m.conf)
 }
 
 // reconfigureDNSServer updates the DNS server configuration using the stored
 // TLS settings.  m.mu is expected to be locked.
+//
+/*
 func (m *tlsManager) reconfigureDNSServer(ctx context.Context) (err error) {
 	newConf, err := newServerConfig(
 		&config.DNS,
@@ -307,6 +304,7 @@ func (m *tlsManager) reconfigureDNSServer(ctx context.Context) (err error) {
 
 	return nil
 }
+*/
 
 // loadTLSConfig loads and validates the TLS configuration.  It also sets
 // [tlsConfigSettings.CertificateChainData] and
@@ -621,15 +619,6 @@ func (m *tlsManager) handleTLSConfigure(w http.ResponseWriter, r *http.Request) 
 		}()
 	}
 
-	err = m.reconfigureDNSServer(ctx)
-	if err != nil {
-		m.logger.ErrorContext(ctx, "reconfiguring dns server", slogutil.KeyError, err)
-
-		aghhttp.ErrorAndLog(ctx, m.logger, r, w, http.StatusInternalServerError, "%s", err)
-
-		return
-	}
-
 	resp := &tlsConfig{
 		tlsConfigSettingsExt: req,
 		tlsConfigStatus:      m.status,
@@ -640,14 +629,6 @@ func (m *tlsManager) handleTLSConfigure(w http.ResponseWriter, r *http.Request) 
 	err = rc.Flush()
 	if err != nil {
 		m.logger.ErrorContext(ctx, "flushing response", slogutil.KeyError, err)
-	}
-
-	// The background context is used because the TLSConfigChanged wraps context
-	// with timeout on its own and shuts down the server, which handles current
-	// request.  It is also should be done in a separate goroutine due to the
-	// same reason.
-	if restartHTTPS {
-		go m.web.tlsConfigChanged(context.Background(), &req.tlsConfigSettings)
 	}
 }
 
@@ -1116,4 +1097,27 @@ func (m *tlsManager) registerWebHandlers() {
 	m.httpReg.Register(http.MethodGet, "/control/tls/status", m.handleTLSStatus)
 	m.httpReg.Register(http.MethodPost, "/control/tls/configure", m.handleTLSConfigure)
 	m.httpReg.Register(http.MethodPost, "/control/tls/validate", m.handleTLSValidate)
+}
+
+// TODO !! Docs, make sure it is correct.
+func (m *tlsManager) TLSConfig() (conf *tls.Config) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	clone := m.tlsConf.Clone()
+
+	return clone
+}
+
+func (m *tlsManager) RootCAs() (root *x509.CertPool) {
+	// TODO: !! Make sure that tlsConf is a right source of CAs.
+	return m.tlsConf.RootCAs
+}
+
+// getCertificate returns the TLS certificate for chi.  See
+// [tls.Config.GetCertificate].  c must not be modified.
+//
+// TODO: !! Find the correct way to implement.  Make sure it is required there.
+func (m *tlsManager) getCertificate(chi *tls.ClientHelloInfo) (c *tls.Certificate, err error) {
+	return nil, nil
 }

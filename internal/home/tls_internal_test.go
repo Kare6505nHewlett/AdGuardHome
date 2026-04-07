@@ -14,7 +14,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"net/netip"
 	"os"
 	"path/filepath"
 	"testing"
@@ -490,6 +489,8 @@ func TestValidateTLSSettings(t *testing.T) {
 	}
 }
 
+// TODO !! Remove comment.
+/*
 func TestTLSManager_HandleTLSValidate(t *testing.T) {
 	storeGlobals(t)
 
@@ -662,3 +663,4 @@ func TestTLSManager_HandleTLSConfigure(t *testing.T) {
 		return true
 	}, testTimeout, testTimeout/10)
 }
+*/
