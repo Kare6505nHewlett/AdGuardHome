@@ -69,8 +69,8 @@ func (web *webAPI) handleVersionJSON(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		l,
 		web.conf.portHTTPS,
-		web.conf.portDNSOverTLS,
-		web.conf.portDNSOverQUIC,
+		web.conf.portDoT,
+		web.conf.portDoQ,
 	)
 	if err != nil {
 		// Don't wrap the error, because it's informative enough as is.

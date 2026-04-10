@@ -54,12 +54,12 @@ type tlsManager struct {
 	// Resolve it.
 	web *webAPI
 
-	// conf contains the TLS configuration settings.  It must not be nil.
-	conf *tlsConfigSettings
-
-	// TODO !! Finish docs.
-	// original
+	// tlsConf contains the TLS configuration settings.  It must not be nil
 	tlsConf *tls.Config
+
+	// conf contains the extended TLS configuration settings.
+	// It must not be nil.
+	conf *tlsConfigSettings
 
 	// confModifier is used to update the global configuration.
 	confModifier agh.ConfigModifier
@@ -157,9 +157,9 @@ func newTLSManager(ctx context.Context, conf *tlsManagerConfig) (m *tlsManager, 
 	}
 
 	m.tlsConf = &tls.Config{
-		GetCertificate: m.getCertificate,
-		MinVersion:     tls.VersionTLS12,
-		MaxVersion:     tls.VersionTLS13,
+		GetConfigForClient: m.getConfigForClient,
+		MinVersion:         tls.VersionTLS12,
+		MaxVersion:         tls.VersionTLS13,
 	}
 
 	m.setCertFileTime(ctx)
@@ -277,34 +277,6 @@ func (m *tlsManager) reload(ctx context.Context) {
 
 	m.certLastMod = fi.ModTime().UTC()
 }
-
-// reconfigureDNSServer updates the DNS server configuration using the stored
-// TLS settings.  m.mu is expected to be locked.
-//
-/*
-func (m *tlsManager) reconfigureDNSServer(ctx context.Context) (err error) {
-	newConf, err := newServerConfig(
-		&config.DNS,
-		config.Clients.Sources,
-		m.conf,
-		config.HTTPConfig.DoH,
-		m,
-		m.httpReg,
-		globalContext.clients.storage,
-		m.confModifier,
-	)
-	if err != nil {
-		return fmt.Errorf("generating forwarding dns server config: %w", err)
-	}
-
-	err = globalContext.dnsServer.Reconfigure(ctx, newConf)
-	if err != nil {
-		return fmt.Errorf("starting forwarding dns server: %w", err)
-	}
-
-	return nil
-}
-*/
 
 // loadTLSConfig loads and validates the TLS configuration.  It also sets
 // [tlsConfigSettings.CertificateChainData] and
@@ -1099,7 +1071,7 @@ func (m *tlsManager) registerWebHandlers() {
 	m.httpReg.Register(http.MethodPost, "/control/tls/validate", m.handleTLSValidate)
 }
 
-// TODO !! Docs, make sure it is correct.
+// TLSConfig get a clone of a current TLS configuration.
 func (m *tlsManager) TLSConfig() (conf *tls.Config) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -1109,15 +1081,26 @@ func (m *tlsManager) TLSConfig() (conf *tls.Config) {
 	return clone
 }
 
-func (m *tlsManager) RootCAs() (root *x509.CertPool) {
-	// TODO: !! Make sure that tlsConf is a right source of CAs.
+// RootCAs get current root certificates.
+func (m *tlsManager) RootCAs() *x509.CertPool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.tlsConf == nil {
+		return nil
+	}
+
 	return m.tlsConf.RootCAs
 }
 
-// getCertificate returns the TLS certificate for chi.  See
-// [tls.Config.GetCertificate].  c must not be modified.
-//
-// TODO: !! Find the correct way to implement.  Make sure it is required there.
-func (m *tlsManager) getCertificate(chi *tls.ClientHelloInfo) (c *tls.Certificate, err error) {
-	return nil, nil
+// getConfigForClient
+func (m *tlsManager) getConfigForClient(chi *tls.ClientHelloInfo) (*tls.Config, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.tlsConf == nil {
+		return nil, fmt.Errorf("no TLS config")
+	}
+
+	return m.tlsConf.Clone(), nil
 }

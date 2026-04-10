@@ -7,6 +7,8 @@ import (
 
 // TLSConfigProvider provides TLS configuration to consumers.  Implementations
 // must be safe for concurrent use.
+//
+// TODO(m.kazantsev): Merge with the Manager interface.
 type TLSConfigProvider interface {
 	// TLSConfig returns a clone of the current TLS configuration.  conf uses
 	// GetConfigForClient for automatic updates.
@@ -19,6 +21,9 @@ type TLSConfigProvider interface {
 // EmptyTLSConfigProvider is an empty implementation of the [TLSConfigProvider]
 // interface.
 type EmptyTLSConfigProvider struct{}
+
+// type check
+var _ TLSConfigProvider = EmptyTLSConfigProvider{}
 
 // TLSConfig implements the [TLSConfigProvider] interface for
 // EmptyTLSConfigProvider.  It always returns nil.

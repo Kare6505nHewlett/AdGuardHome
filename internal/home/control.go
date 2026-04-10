@@ -69,12 +69,12 @@ func appendDNSAddrsWithIfaces(dst []string, src []netip.Addr) (res []string, err
 
 // collectDNSAddresses returns the list of DNS addresses the server is listening
 // on, including the addresses on all interfaces in cases of unspecified IPs.
-// tlsMgr must not be nil.
+// tlsCfg must not be nil.
 func collectDNSAddresses(
 	tlsCfg *tls.Config,
 	portHTTPS uint16,
-	portDNSOverTLS uint16,
-	portDNSOverQUIC uint16,
+	portDoT uint16,
+	portDoQ uint16,
 ) (addrs []string, err error) {
 	if hosts := config.DNS.BindHosts; len(hosts) == 0 {
 		addrs = appendDNSAddrs(addrs, netutil.IPv4Localhost())
@@ -88,8 +88,8 @@ func collectDNSAddresses(
 	de := getDNSEncryption(
 		tlsCfg.ServerName,
 		portHTTPS,
-		portDNSOverTLS,
-		portDNSOverQUIC,
+		portDoT,
+		portDoQ,
 	)
 	if de.https != "" {
 		addrs = append(addrs, de.https)
@@ -135,8 +135,8 @@ func (web *webAPI) handleStatus(w http.ResponseWriter, r *http.Request) {
 	dnsAddrs, err := collectDNSAddresses(
 		web.tlsManager.TLSConfig(),
 		web.conf.portHTTPS,
-		web.conf.portDNSOverTLS,
-		web.conf.portDNSOverQUIC,
+		web.conf.portDoT,
+		web.conf.portDoQ,
 	)
 	if err != nil {
 		// Don't add a lot of formatting, since the error is already

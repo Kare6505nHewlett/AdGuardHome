@@ -114,12 +114,14 @@ type webAPIConfig struct {
 	// serveHTTP3, if true, tells AdGuard Home to start HTTP3 server.
 	serveHTTP3 bool
 
-	// TODO !! Docs.
+	// portHTTPS is a port of HTTPS.
 	portHTTPS uint16
 
-	portDNSOverTLS uint16
+	// portDoT is a port of DNS over TLS.
+	portDoT uint16
 
-	portDNSOverQUIC uint16
+	// portDoq is a port of DNS over QUIC.
+	portDoQ uint16
 }
 
 // httpsServer contains the data for the HTTPS server.
@@ -133,8 +135,7 @@ type httpsServer struct {
 	// TODO(a.garipov): Why is there a *sync.Cond here?  Remove.
 	cond     *sync.Cond
 	condLock sync.Mutex
-	// TODO !! Remove comment.
-	// cert       tls.Certificate
+
 	inShutdown bool
 	enabled    bool
 }
@@ -220,45 +221,6 @@ func newWebAPI(ctx context.Context, conf *webAPIConfig) (w *webAPI) {
 	return w
 }
 
-// tlsConfigChanged updates the TLS configuration and restarts the HTTPS server
-// if necessary.  tlsConf must not be nil.
-//
-/*
-func (web *webAPI) tlsConfigChanged(ctx context.Context, tlsConf *tlsConfigSettings) {
-	defer slogutil.RecoverAndExit(ctx, web.logger, osutil.ExitCodeFailure)
-
-	web.logger.DebugContext(ctx, "applying new tls configuration")
-
-	enabled := tlsConf.Enabled &&
-		tlsConf.PortHTTPS != 0 &&
-		len(tlsConf.PrivateKeyData) != 0 &&
-		len(tlsConf.CertificateChainData) != 0
-	var cert tls.Certificate
-	var err error
-	if enabled {
-		cert, err = tls.X509KeyPair(tlsConf.CertificateChainData, tlsConf.PrivateKeyData)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	web.httpsServer.cond.L.Lock()
-	if web.httpsServer.server != nil {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, shutdownTimeout)
-		shutdownSrv(ctx, web.logger, web.httpsServer.server)
-		shutdownSrv3(ctx, web.logger, web.httpsServer.server3)
-
-		cancel()
-	}
-
-	web.httpsServer.enabled = enabled
-	web.httpsServer.cert = cert
-	web.httpsServer.cond.Broadcast()
-	web.httpsServer.cond.L.Unlock()
-}
-*/
-
 // loggerKeyServer is the key used by [webAPI] to identify servers.
 const loggerKeyServer = "server"
 
@@ -274,7 +236,7 @@ func (web *webAPI) start(ctx context.Context) {
 	// this loop is used as an ability to change listening host and/or port
 
 	for !web.httpsServer.inShutdown {
-		printHTTPAddresses(urlutil.SchemeHTTP, web.tlsManager.TLSConfig(), web.conf.portHTTPS)
+		printHTTPAddresses(web.tlsManager.TLSConfig(), urlutil.SchemeHTTP, web.conf.portHTTPS)
 		errs := make(chan error, 2)
 
 		hdlr := withMiddlewares(web.conf.mux, limitRequestBody)
@@ -388,7 +350,7 @@ func (web *webAPI) serveTLS(ctx context.Context) (next bool) {
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
-	printHTTPAddresses(urlutil.SchemeHTTPS, web.tlsManager.TLSConfig(), portHTTPS)
+	printHTTPAddresses(web.httpServer.TLSConfig, urlutil.SchemeHTTPS, portHTTPS)
 
 	if web.conf.serveHTTP3 {
 		go web.mustStartHTTP3(ctx, addr)

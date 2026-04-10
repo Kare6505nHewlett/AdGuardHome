@@ -261,7 +261,7 @@ func newServerConfig(
 	clientSrcConf *clientSourcesConfig,
 	tlsConf *tlsConfigSettings,
 	dohConf *doHConfig,
-	tlsMgr aghtls.TLSConfigProvider,
+	tlsConfProvider aghtls.TLSConfigProvider,
 	httpReg aghhttp.Registrar,
 	clientsContainer dnsforward.ClientsContainer,
 	confModifier agh.ConfigModifier,
@@ -283,7 +283,7 @@ func newServerConfig(
 		TLSConf:                intTLSConf,
 		TLSAllowUnencryptedDoH: dohConf.InsecureEnabled,
 		UpstreamTimeout:        time.Duration(dnsConf.UpstreamTimeout),
-		TLSv12Roots:            tlsMgr.RootCAs(),
+		TLSv12Roots:            tlsConfProvider.RootCAs(),
 		ConfModifier:           confModifier,
 		HTTPReg:                httpReg,
 		LocalPTRResolvers:      dnsConf.PrivateRDNSResolvers,
@@ -425,8 +425,8 @@ type dnsEncryption struct {
 func getDNSEncryption(
 	serverName string,
 	httpsPort uint16,
-	dnsOverTLSPort uint16,
-	dnsOverQUIC uint16,
+	portDoT uint16,
+	portDoQ uint16,
 ) (de dnsEncryption) {
 	if len(serverName) == 0 {
 		return dnsEncryption{}
@@ -445,14 +445,14 @@ func getDNSEncryption(
 		}).String()
 	}
 
-	if p := dnsOverTLSPort; p != 0 {
+	if p := portDoT; p != 0 {
 		de.tls = (&url.URL{
 			Scheme: "tls",
 			Host:   netutil.JoinHostPort(serverName, p),
 		}).String()
 	}
 
-	if p := dnsOverQUIC; p != 0 {
+	if p := portDoQ; p != 0 {
 		de.quic = (&url.URL{
 			Scheme: "quic",
 			Host:   netutil.JoinHostPort(serverName, p),

@@ -1264,10 +1264,11 @@ func printWebAddrs(proto, addr string, port uint16) {
 }
 
 // printHTTPAddresses prints the IP addresses which user can use to access the
-// admin interface.  proto is either schemeHTTP or schemeHTTPS.
+// admin interface.  proto is either [urlutil.SchemeHTTP] or
+// [urlutil.SchemeHTTPS].  tlsConf must not be nil.
 //
 // TODO(s.chzhen):  Implement separate functions for HTTP and HTTPS.
-func printHTTPAddresses(proto string, tlsConf *tls.Config, httpsPort uint16) {
+func printHTTPAddresses(tlsConf *tls.Config, proto string, httpsPort uint16) {
 	port := config.HTTPConfig.Address.Port()
 	if proto == urlutil.SchemeHTTPS {
 		port = httpsPort
