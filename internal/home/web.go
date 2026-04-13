@@ -114,8 +114,8 @@ type webAPIConfig struct {
 	// serveHTTP3, if true, tells AdGuard Home to start HTTP3 server.
 	serveHTTP3 bool
 
-	// portHTTPS is a port of HTTPS.
-	portHTTPS uint16
+	// portDoH is a port of HTTPS.
+	portDoH uint16
 
 	// portDoT is a port of DNS over TLS.
 	portDoT uint16
@@ -235,8 +235,16 @@ func (web *webAPI) start(ctx context.Context) {
 
 	// this loop is used as an ability to change listening host and/or port
 
+	tlsConf := web.tlsManager.TLSConfig()
+
 	for !web.httpsServer.inShutdown {
-		printHTTPAddresses(web.tlsManager.TLSConfig(), urlutil.SchemeHTTP, web.conf.portHTTPS)
+		printHTTPAddresses(
+			ctx,
+			web.logger,
+			web.tlsManager.TLSConfig(),
+			urlutil.SchemeHTTP,
+			web.conf.portDoH,
+		)
 		errs := make(chan error, 2)
 
 		hdlr := withMiddlewares(web.conf.mux, limitRequestBody)
@@ -263,6 +271,7 @@ func (web *webAPI) start(ctx context.Context) {
 			ReadHeaderTimeout: web.conf.ReadHeaderTimeout,
 			WriteTimeout:      web.conf.WriteTimeout,
 			ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
+			TLSConfig:         tlsConf,
 		}
 		go func() {
 			defer slogutil.RecoverAndLog(ctx, logger)
@@ -350,7 +359,13 @@ func (web *webAPI) serveTLS(ctx context.Context) (next bool) {
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
-	printHTTPAddresses(web.httpServer.TLSConfig, urlutil.SchemeHTTPS, portHTTPS)
+	printHTTPAddresses(
+		ctx,
+		web.logger,
+		web.tlsManager.TLSConfig(),
+		urlutil.SchemeHTTPS,
+		portHTTPS,
+	)
 
 	if web.conf.serveHTTP3 {
 		go web.mustStartHTTP3(ctx, addr)

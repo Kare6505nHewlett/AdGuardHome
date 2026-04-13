@@ -71,8 +71,8 @@ func appendDNSAddrsWithIfaces(dst []string, src []netip.Addr) (res []string, err
 // on, including the addresses on all interfaces in cases of unspecified IPs.
 // tlsCfg must not be nil.
 func collectDNSAddresses(
-	tlsCfg *tls.Config,
-	portHTTPS uint16,
+	tlsConf *tls.Config,
+	portDoH uint16,
 	portDoT uint16,
 	portDoQ uint16,
 ) (addrs []string, err error) {
@@ -85,12 +85,7 @@ func collectDNSAddresses(
 		}
 	}
 
-	de := getDNSEncryption(
-		tlsCfg.ServerName,
-		portHTTPS,
-		portDoT,
-		portDoQ,
-	)
+	de := getDNSEncryption(tlsConf.ServerName, portDoH, portDoT, portDoQ)
 	if de.https != "" {
 		addrs = append(addrs, de.https)
 	}
@@ -134,7 +129,7 @@ func (web *webAPI) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	dnsAddrs, err := collectDNSAddresses(
 		web.tlsManager.TLSConfig(),
-		web.conf.portHTTPS,
+		web.conf.portDoH,
 		web.conf.portDoT,
 		web.conf.portDoQ,
 	)
@@ -215,14 +210,18 @@ func (web *webAPI) registerControlHandlers() {
 	web.httpReg.Register(http.MethodGet, "/control/profile", web.handleGetProfile)
 	web.httpReg.Register(http.MethodPut, "/control/profile/update", web.handlePutProfile)
 
+	mobileConfHandler := newMobileConfigHandler(&mobileConfigHandlerConfig{
+		logger: web.baseLogger,
+	})
+
 	// No authentication is required for DoH/DoT configuration endpoints.
 	mux.Handle(
 		"/apple/doh.mobileconfig",
-		web.postInstallHandler(http.HandlerFunc(handleMobileConfigDoH)),
+		web.postInstallHandler(http.HandlerFunc(mobileConfHandler.handleMobileConfigDoH)),
 	)
 	mux.Handle(
 		"/apple/dot.mobileconfig",
-		web.postInstallHandler(http.HandlerFunc(handleMobileConfigDoT)),
+		web.postInstallHandler(http.HandlerFunc(mobileConfHandler.handleMobileConfigDoT)),
 	)
 
 	web.registerAuthHandlers()

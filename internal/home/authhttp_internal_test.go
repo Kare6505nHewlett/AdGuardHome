@@ -591,6 +591,11 @@ func TestAuth_ServeHTTP_auth(t *testing.T) {
 		path:     "/control/version.json",
 		method:   http.MethodGet,
 		wantCode: http.StatusOK,
+	}, {
+		name:     "status",
+		path:     "/control/status",
+		method:   http.MethodGet,
+		wantCode: http.StatusOK,
 	}}
 
 	for _, tc := range testCases {

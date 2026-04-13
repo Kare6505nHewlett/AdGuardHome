@@ -68,7 +68,7 @@ func (web *webAPI) handleVersionJSON(w http.ResponseWriter, r *http.Request) {
 	err = resp.setAllowedToAutoUpdate(
 		ctx,
 		l,
-		web.conf.portHTTPS,
+		web.conf.portDoH,
 		web.conf.portDoT,
 		web.conf.portDoQ,
 	)
@@ -184,24 +184,27 @@ type versionResponse struct {
 	Disabled bool `json:"disabled"`
 }
 
+// maxPortSize is the maximum length of a port, expressed as an integer.
+const maxPortSize = 1024
+
 // setAllowedToAutoUpdate sets CanAutoUpdate to true if AdGuard Home is actually
 // allowed to perform an automatic update by the OS.  l and tlsMgr must not be
 // nil.
 func (vr *versionResponse) setAllowedToAutoUpdate(
 	ctx context.Context,
 	l *slog.Logger,
-	portHTTPS uint16,
-	portDNSOverTLS uint16,
-	portDNSOverQUIC uint16,
+	portDoH uint16,
+	portDoT uint16,
+	portDoQ uint16,
 ) (err error) {
 	if vr.CanAutoUpdate != aghalg.NBTrue {
 		return nil
 	}
 
 	canUpdate := true
-	if tlsConfUsesPrivilegedPorts(portHTTPS, portDNSOverTLS, portDNSOverQUIC) ||
-		config.HTTPConfig.Address.Port() < 1024 ||
-		config.DNS.Port < 1024 {
+	if tlsConfUsesPrivilegedPorts(portDoH, portDoT, portDoQ) ||
+		config.HTTPConfig.Address.Port() < maxPortSize ||
+		config.DNS.Port < maxPortSize {
 		canUpdate, err = aghnet.CanBindPrivilegedPorts(ctx, l)
 		if err != nil {
 			return fmt.Errorf("checking ability to bind privileged ports: %w", err)
@@ -215,8 +218,8 @@ func (vr *versionResponse) setAllowedToAutoUpdate(
 
 // tlsConfUsesPrivilegedPorts returns true if the provided TLS configuration
 // indicates that privileged ports are used.
-func tlsConfUsesPrivilegedPorts(portHTTPS, portDNSOverTLS, portDNSOverQUIC uint16) (ok bool) {
-	return portHTTPS < 1024 || portDNSOverTLS < 1024 || portDNSOverQUIC < 1024
+func tlsConfUsesPrivilegedPorts(portDoH, portDoT, portDoQ uint16) (ok bool) {
+	return portDoH < maxPortSize || portDoT < maxPortSize || portDoQ < maxPortSize
 }
 
 // finishUpdate completes an update procedure.  It is intended to be used as a

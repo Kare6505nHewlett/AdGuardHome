@@ -107,7 +107,7 @@ func initDNS(
 		return err
 	}
 
-	return initDNSServer(
+	err = initDNSServer(
 		ctx,
 		globalContext.filters,
 		globalContext.stats,
@@ -119,6 +119,13 @@ func initDNS(
 		baseLogger,
 		confModifier,
 	)
+	if err != nil {
+		return fmt.Errorf("creating dns server: %w", err)
+	}
+
+	registerDoHHandlers(config.HTTPConfig.DoH.Routes)
+
+	return nil
 }
 
 // initDNSServer initializes the [context.dnsServer].  To only use the internal
@@ -184,12 +191,9 @@ func initDNSServer(
 		dnsConf.UsePrivateRDNS = false
 		err = globalContext.dnsServer.Prepare(ctx, dnsConf)
 	}
-
 	if err != nil {
 		return fmt.Errorf("dnsServer.Prepare: %w", err)
 	}
-
-	registerDoHHandlers(config.HTTPConfig.DoH.Routes)
 
 	return nil
 }
@@ -424,7 +428,7 @@ type dnsEncryption struct {
 // listens on.
 func getDNSEncryption(
 	serverName string,
-	httpsPort uint16,
+	portDoH uint16,
 	portDoT uint16,
 	portDoQ uint16,
 ) (de dnsEncryption) {
@@ -432,9 +436,9 @@ func getDNSEncryption(
 		return dnsEncryption{}
 	}
 
-	if httpsPort != 0 {
+	if portDoH != 0 {
 		addr := serverName
-		if p := httpsPort; p != defaultPortHTTPS {
+		if p := portDoH; p != defaultPortHTTPS {
 			addr = netutil.JoinHostPort(addr, p)
 		}
 

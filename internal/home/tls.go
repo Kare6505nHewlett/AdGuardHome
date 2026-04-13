@@ -117,6 +117,11 @@ func newTLSManager(ctx context.Context, conf *tlsManagerConfig) (m *tlsManager, 
 		status:        &tlsConfigStatus{},
 		conf:          &conf.tlsSettings,
 		servePlainDNS: conf.servePlainDNS,
+		tlsConf: &tls.Config{
+			GetConfigForClient: m.getConfigForClient,
+			MinVersion:         tls.VersionTLS12,
+			MaxVersion:         tls.VersionTLS13,
+		},
 	}
 
 	m.rootCerts = aghtls.SystemRootCAs(ctx, conf.logger)
@@ -154,12 +159,6 @@ func newTLSManager(ctx context.Context, conf *tlsManagerConfig) (m *tlsManager, 
 		m.conf.Enabled = false
 
 		return m, err
-	}
-
-	m.tlsConf = &tls.Config{
-		GetConfigForClient: m.getConfigForClient,
-		MinVersion:         tls.VersionTLS12,
-		MaxVersion:         tls.VersionTLS13,
 	}
 
 	m.setCertFileTime(ctx)
@@ -559,6 +558,8 @@ func (m *tlsManager) handleTLSConfigure(w http.ResponseWriter, r *http.Request) 
 	if req.PrivateKeySaved {
 		req.PrivateKey = m.conf.PrivateKey
 	}
+
+	req.StrictSNICheck = m.conf.StrictSNICheck
 
 	if err = m.validateTLSSettings(req); err != nil {
 		aghhttp.ErrorAndLog(ctx, m.logger, r, w, http.StatusBadRequest, "%s", err)
@@ -1006,9 +1007,9 @@ func parsePrivateKey(der []byte) (key crypto.PrivateKey, typ string, err error) 
 }
 
 // unmarshalTLS handles base64-encoded certificates transparently
-func unmarshalTLS(r *http.Request) (tlsConfigSettingsExt, error) {
-	data := tlsConfigSettingsExt{}
-	err := json.NewDecoder(r.Body).Decode(&data)
+func unmarshalTLS(r *http.Request) (data tlsConfigSettingsExt, err error) {
+	data = tlsConfigSettingsExt{}
+	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		return data, fmt.Errorf("failed to parse new TLS config json: %w", err)
 	}
@@ -1082,7 +1083,7 @@ func (m *tlsManager) TLSConfig() (conf *tls.Config) {
 }
 
 // RootCAs get current root certificates.
-func (m *tlsManager) RootCAs() *x509.CertPool {
+func (m *tlsManager) RootCAs() (cert *x509.CertPool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -1093,13 +1094,13 @@ func (m *tlsManager) RootCAs() *x509.CertPool {
 	return m.tlsConf.RootCAs
 }
 
-// getConfigForClient
+// getConfigForClient gets a new clone of a current TLS configuration for chi.
 func (m *tlsManager) getConfigForClient(chi *tls.ClientHelloInfo) (*tls.Config, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.tlsConf == nil {
-		return nil, fmt.Errorf("no TLS config")
+		return nil, errors.ErrNoValue
 	}
 
 	return m.tlsConf.Clone(), nil
