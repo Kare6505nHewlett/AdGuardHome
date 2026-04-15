@@ -46,6 +46,7 @@ build: deps
 ## clean: Remove build artifacts.
 clean:
 	@rm -rf $(OUT_DIR)
+	@rm -f coverage.out coverage.html
 	@echo "Cleaned build artifacts."
 
 ## fmt: Format Go source files.
