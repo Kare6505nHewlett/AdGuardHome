@@ -76,5 +76,6 @@ coverage: test
 	@echo "Coverage report written to coverage.html"
 
 ## run: Build and run AdGuardHome with default flags.
+# Using --verbose for easier debugging during local development.
 run: build
-	$(OUT_DIR)/$(BINARY) --no-check-update
+	$(OUT_DIR)/$(BINARY) --no-check-update --verbose
