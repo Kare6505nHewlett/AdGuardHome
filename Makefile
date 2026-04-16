@@ -78,5 +78,6 @@ coverage: test
 ## run: Build and run AdGuardHome with default flags.
 # Using --no-check-update to avoid update prompts, --verbose for easier debugging,
 # and --web-addr to bind only to localhost for personal/local use.
+# Port changed to 3001 to avoid conflict with other local services on my machine.
 run: build
-	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3000
+	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001
