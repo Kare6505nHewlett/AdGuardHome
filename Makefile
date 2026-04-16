@@ -81,5 +81,6 @@ coverage: test
 # Port changed to 3001 to avoid conflict with other local services on my machine.
 # --dns-addr binds DNS to localhost only since this is just for local testing,
 # not meant to serve the whole network.
+# --work-dir stores config/data in ./run-data so it doesn't clutter the repo root.
 run: build
-	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001 --dns-addr 127.0.0.1
+	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001 --dns-addr 127.0.0.1 --work-dir ./run-data
