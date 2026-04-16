@@ -82,5 +82,6 @@ coverage: test
 # --dns-addr binds DNS to localhost only since this is just for local testing,
 # not meant to serve the whole network.
 # --work-dir stores config/data in ./run-data so it doesn't clutter the repo root.
+# NOTE: run 'sudo make run' if port 53 is needed; 127.0.0.1 is fine for local dev.
 run: build
-	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001 --dns-addr 127.0.0.1 --work-dir ./run-data
+	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001 --dns-addr 127.0.0.1:5353 --work-dir ./run-data
