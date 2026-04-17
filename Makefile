@@ -21,7 +21,7 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LDFLAGS := -ldflags "-s -w \
 	-X github.com/AdguardTeam/AdGuardHome/internal/version.version=$(VERSION) \
 	-X github.com/AdguardTeam/AdGuardHome/internal/version.buildtime=$(BUILD_TIME) \
-	-X github.com/AdguardTeam/AdGuardHome/internal/version.commitid=$(GIT_COMMIT)"
+	-X github.com/AdguardTeam/AdGuardHome/IT_COMMIT)"
 
 # Default target
 all: build
@@ -85,3 +85,8 @@ coverage: test
 # NOTE: run 'sudo make run' if port 53 is needed; 127.0.0.1 is fine for local dev.
 run: build
 	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001 --dns-addr 127.0.0.1:5353 --work-dir ./run-data
+
+## run-reset: Remove run-data and start fresh (useful when config gets into a bad state).
+run-reset:
+	@rm -rf ./run-data
+	@echo "Removed ./run-data. Run 'make run' to start fresh."
