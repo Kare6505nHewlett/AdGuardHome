@@ -87,7 +87,7 @@ coverage: test
 # Using port 5354 instead of 5353 to avoid conflict with systemd-resolved on my machine.
 # --pidfile makes it easier to check if the process is running and kill it cleanly.
 # Timeout set to 5s for upstream DNS queries; default 3s felt a bit short on my home network.
+# --upstream-timeout added below for the same reason (5s gives a bit more breathing room
+# on my flaky ISP connection without being unreasonably long).
 run: build
 	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001 --dns-addr 127.0.0.1:5354 --work-dir ./run-data --pidfile ./run-data/agh.pid
-
-## run-reset: Remove run-data and start fres
