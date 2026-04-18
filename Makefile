@@ -88,7 +88,7 @@ coverage: test
 # --pidfile makes it easier to check if the process is running and kill it cleanly.
 # Timeout set to 5s for upstream DNS queries; default 3s felt a bit short on my home network.
 # --upstream-timeout added below for the same reason (5s gives a bit more breathing room
-# on my flaky ISP connection).
+# on my flaky ISP connection -- bumping to 7s since 5s still times out occasionally).
 run: build
 	$(OUT_DIR)/$(BINARY) \
 		--no-check-update \
@@ -97,4 +97,4 @@ run: build
 		--dns-addr 127.0.0.1:5354 \
 		--work-dir ./run-data \
 		--pidfile ./run-data/agh.pid \
-		--upstream-timeout 5s
+		--upstream-timeout 7s
