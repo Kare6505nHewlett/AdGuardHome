@@ -86,10 +86,8 @@ coverage: test
 # NOTE: run 'sudo make run' if port 53 is needed; 127.0.0.1 is fine for local dev.
 # Using port 5354 instead of 5353 to avoid conflict with systemd-resolved on my machine.
 # --pidfile makes it easier to check if the process is running and kill it cleanly.
+# Timeout set to 5s for upstream DNS queries; default 3s felt a bit short on my home network.
 run: build
 	$(OUT_DIR)/$(BINARY) --no-check-update --verbose --web-addr 127.0.0.1:3001 --dns-addr 127.0.0.1:5354 --work-dir ./run-data --pidfile ./run-data/agh.pid
 
-## run-reset: Remove run-data and start fresh (useful when config gets into a bad state).
-run-reset:
-	@rm -rf ./run-data
-	@echo "Removed ./run-data. Run 'make run' to start fresh."
+## run-reset: Remove run-data and start fres
