@@ -21,7 +21,8 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LDFLAGS := -ldflags "-s -w \
 	-X github.com/AdguardTeam/AdGuardHome/internal/version.version=$(VERSION) \
 	-X github.com/AdguardTeam/AdGuardHome/internal/version.buildtime=$(BUILD_TIME) \
-	-X github.com/AdguardTeam/AdGuardHome/IT_COMMIT)"
+	-X github.com/AdguardTeam/AdGuardHome/internal/version.channel=development \
+	-X github.com/AdguardTeam/AdGuardHome/internal/version.commitid=$(GIT_COMMIT)"
 
 # Default target
 all: build
